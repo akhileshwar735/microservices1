@@ -1,0 +1,150 @@
+version: '3'
+
+services: # docker run
+    mysql8server:
+        container_name: mysql8server # --name mysql8server
+        ports: # -p 3306:3306 -p 33060:33060
+            - '3306:3306'
+            - '33060:33060'
+        volumes: # -v mysql_data:/var/lib/mysql
+            - 'mysql_data:/var/lib/mysql'
+        environment: # -e MYSQL_ROOT_PASSWORD=Welcome#123
+            - MYSQL_ROOT_PASSWORD=Welcome#123
+        image: 'mysql:latest' # mysql:latest
+        logging:
+            driver: fluentd
+            options:
+                fluentd-address: fluentd
+
+    eureka-service:
+        container_name: eureka-service
+        ports:
+            - '8761:8761'
+        restart: always
+        image: 'eureka-service:latest'
+
+    employee-service:
+        container_name: EMPLOYEE_SERVICE
+        ports:
+            - '6000:5002'
+        environment:
+            - MYSQL_HOST=mysql8server
+            - EUREKA_SERVER_HOST=eureka-service
+        depends_on:
+            - mysql8server
+            - eureka-service
+            - fluentd
+        image: 'employee-service:latest'
+        logging:
+            driver: fluentd
+            options:
+                fluentd-address: fluentd
+
+    product-service:
+        container_name: PRODUCT_SERVICE
+        ports:
+            - '6001:5001'
+        environment:
+            - MYSQL_HOST=mysql8server
+            - EUREKA_SERVER_HOST=eureka-service
+        depends_on:
+            - mysql8server
+            - eureka-service
+            - fluentd
+        image: 'product-service:latest'
+        logging:
+            driver: fluentd
+            options:
+                fluentd-address: fluentd
+
+    customer-service:
+        container_name: CUSTOMER_SERVICE
+        ports:
+            - '5003:5003'
+        environment:
+            - MYSQL_HOST=mysql8server
+            - EUREKA_SERVER_HOST=eureka-service
+        depends_on:
+            - mysql8server
+            - eureka-service
+            - fluentd
+        image: 'customer-service:latest'
+        logging:
+            driver: fluentd
+            options:
+                fluentd-address: fluentd
+
+    order-service:
+        container_name: ORDER_SERVICE
+        ports:
+            - '6003:8080'
+        environment:
+            - MYSQL_HOST=mysql8server
+            - EUREKA_SERVER_HOST=eureka-service
+            - CUSTOMER_SERVICE_HOST=customer-service 
+            - CUSTOMER_SERVICE_PORT=5003
+        depends_on:
+            - mysql8server
+            - eureka-service
+            - fluentd
+        image: 'order-service:latest'
+        logging:
+            driver: fluentd
+            options:
+                fluentd-address: fluentd
+
+
+    gateway-service:
+        container_name: GATEWAY_SERVICE
+        ports:
+            - '5000:5000'
+        environment:
+            - EUREKA_SERVER_HOST=eureka-service
+        depends_on:
+            - eureka-service
+            - fluentd
+        image: 'gateway-service:latest'
+        logging:
+            driver: fluentd
+            options:
+                fluentd-address: fluentd
+    
+      
+    elasticsearch:
+        image: docker.elastic.co/elasticsearch/elasticsearch:6.5.4
+        container_name: elasticsearch
+        ports:
+            - '9200:9200'
+        environment:
+            - bootstrap.memory_lock=true
+            - 'ES_JAVA_OPTS=-Xms512m -Xmx512m'
+        ulimits:
+            memlock:
+                soft: -1
+                hard: -1
+
+
+    fluentd:
+        build: ./fluentd
+        container_name: fluentd
+        ports:
+            - '24224:24224'
+            - '24224:24224/udp'
+        volumes:
+            - './fluentd/conf:/fluentd/etc'
+
+    kibana:
+        image: docker.elastic.co/kibana/kibana:6.5.4
+        container_name: kibana_service
+        environment:
+            - 'ELASTICSEARCH_URL=http://elasticsearch:9200'
+        ports:
+            - '5601:5601'
+        depends_on:
+            - elasticsearch
+
+
+volumes:
+    mysql_data:
+        name: mysql_data
+        driver: local
