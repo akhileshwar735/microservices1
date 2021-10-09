@@ -1,0 +1,35 @@
+server:
+  port: ${APP_PORT:5001}
+
+spring:
+  application:
+    name: product-service
+
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://${MYSQL_HOST:localhost}:${MYSQL_PORT:3306}/${MYSQL_DB:northwind}
+    username: ${MYSQL_USERNAME:root}
+    password: ${MYSQL_PASSWORD:Welcome#123}
+  jpa:
+    hibernate:
+      ddl-auto: update
+      naming:
+        physical-strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
+
+  logging:
+    level:
+      com:
+        akhil: TRACE
+      org:
+        springframework: INFO
+        hibernate: DEBUG
+
+eureka:
+  client:
+    registerWithEureka: true
+    fetchRegistry: true
+    serviceUrl:
+      defaultZone: http://${EUREKA_SERVER_HOST:localhost}:8761/eureka/
+  instance:
+    hostname: ${EUREKA_SERVER_HOST:localhost}
+    prefer-ip-address: true
